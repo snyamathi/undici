@@ -300,3 +300,21 @@ test('fromInnerResponse', () => {
   assert.strictEqual(getHeadersList(response[kHeaders]), innerResponse.headersList)
   assert.strictEqual(getHeadersGuard(response[kHeaders]), 'immutable')
 })
+
+test('clone body garbage collection', async () => {
+  let cloneBodyRef
+
+  await (async () => {
+    const res = new Response(randomBytes(2 ** 8))
+    const clone = res.clone()
+    cloneBodyRef = new WeakRef(clone.body)
+    await clone.text()
+    await res.text()
+  })()
+
+  await setImmediate()
+  global.gc()
+
+  const cloneBody = cloneBodyRef.deref()
+  assert.equal(cloneBody, undefined, 'clone body was not garbage collected')
+})
